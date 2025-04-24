@@ -519,10 +519,11 @@ class SidebarScreen extends StatelessWidget {
                   ),
                   _buildMenuItem(
                     icon: Icons.calendar_today_outlined,
-                    title: "Planned",
+                    title: "Reserve Meeting Room",
                     count: 23,
                     onTap: () {
-                      // TODO: Future screen
+                      Navigator.pushReplacementNamed(
+                          context, '/reserveMeetingRoom');
                     },
                   ),
                   _buildMenuItem(

@@ -31,6 +31,14 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.0
+  carousel_slider: 4.2.0
+  table_calendar: ^3.2.0
+  intl: ^0.20.2
+  fluttertoast: ^8.2.12
+  shared_preferences: ^2.2.2
+  google_fonts: ^6.1.0
+  google_sign_in: ^6.1.4
+  url_launcher: ^6.2.5
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -62,14 +70,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/background.jpg
-    - assets/image.png
-    - assets/point.png
-    - assets/coins.png
-    - assets/ppp.png
-    - assets/meetingRoom1.jpg
-    - assets/officeroom2.jpg
-    - assets/openspace1.jpg
+    - assets/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
