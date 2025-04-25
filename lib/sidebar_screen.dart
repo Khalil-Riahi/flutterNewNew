@@ -528,10 +528,11 @@ class SidebarScreen extends StatelessWidget {
                   ),
                   _buildMenuItem(
                     icon: Icons.person_outline,
-                    title: "Shared tasks",
+                    title: "Reserve Office Room",
                     count: 2,
                     onTap: () {
-                      // TODO: Future screen
+                      Navigator.pushReplacementNamed(
+                          context, '/reserveOfficeRoom');
                     },
                   ),
                   _buildMenuItem(

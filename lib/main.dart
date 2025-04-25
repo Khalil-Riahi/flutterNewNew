@@ -499,10 +499,12 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/OfficeRoom_details_screen.dart';
 import 'package:flutter_application_1/coworking_home.dart';
 import 'package:flutter_application_1/listoftables.dart';
 import 'package:flutter_application_1/login_screen.dart';
 import 'package:flutter_application_1/main_layout.dart';
+import 'package:flutter_application_1/officeRoomList.dart';
 import 'package:flutter_application_1/signup_screen.dart';
 import 'package:flutter_application_1/welcome_screen.dart';
 // import 'package:flutter_application_1/schedule_screen.dart';  // You create this
@@ -537,6 +539,18 @@ class MyApp extends StatelessWidget {
             MainLayout(child: const CoworkingApp(), currentIndex: 0),
 
         '/reserveMeetingRoom': (context) => MyCoursesScreen(),
+        '/reserveOfficeRoom': (context) => OfficeRoomList(),
+
+        '/course-detail1': (ctx) {
+          final args = ModalRoute.of(ctx)!.settings.arguments;
+          if (args is Map<String, dynamic>) {
+            return OfficeRoomReservationScreen(room: args);
+          }
+          return const Scaffold(
+            body: Center(child: Text('Error: no office-room data provided')),
+          );
+        },
+        // ''
 
         '/course-detail': (ctx) {
           final args = ModalRoute.of(ctx)!.settings.arguments;
