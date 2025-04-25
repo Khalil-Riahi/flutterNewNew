@@ -185,7 +185,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
   Future<void> _fetchUserPoints() async {
     setState(() => isLoading = true);
     try {
-      const userId = 'someUserId';
+      const userId = '67ff369b2f63df73b4ce3f1d';
       final resp = await http.get(
         Uri.parse('http://localhost:8000/ELACO/Points/$userId'),
         headers: {'Content-Type': 'application/json'},
