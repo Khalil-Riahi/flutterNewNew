@@ -14,11 +14,11 @@ class _OfficeRoomListState extends State<OfficeRoomList> {
   String _currentFilter = 'Upcoming';
 
   List<dynamic> officeRooms = [];
-  List<dynamic> reservations = [];
+  List<dynamic> reservations = []; // ⬅️ Keep as List of Lists now (important!)
 
   final List<String> images = [
     'assets/officeroom2.jpg',
-    'assets/officeroom3.jpg',
+    'assets/officeRoom3.jpg',
   ];
 
   @override
@@ -52,16 +52,13 @@ class _OfficeRoomListState extends State<OfficeRoomList> {
         headers: {'Content-Type': 'application/json'},
       );
 
-      print('Status code: ${resp.statusCode}');
-      print('Response body: ${resp.body}');
-
       if (resp.statusCode == 200) {
         final data = json.decode(resp.body);
         final allNested = data['data'] as List;
-        final all = allNested.expand((item) => item).toList();
 
         setState(() {
-          reservations = all;
+          reservations = allNested;
+          // ✅ FIX 1: Keep as List<List<dynamic>>, DO NOT flatten using .expand()
         });
 
         print('Saved reservations: $reservations');
@@ -121,12 +118,9 @@ class _OfficeRoomListState extends State<OfficeRoomList> {
                 itemCount: officeRooms.length,
                 itemBuilder: (context, index) {
                   final room = officeRooms[index];
-                  print("room room");
-                  print(room);
-
                   final image = images[index % images.length];
 
-                  return _buildRoomCard(room, image);
+                  return _buildRoomCard(room, image, index); // ✅ Pass index too
                 },
               ),
             ),
@@ -156,7 +150,7 @@ class _OfficeRoomListState extends State<OfficeRoomList> {
     );
   }
 
-  Widget _buildRoomCard(dynamic room, String imagePath) {
+  Widget _buildRoomCard(dynamic room, String imagePath, int index) {
     final descriptions = room['description'] ?? [];
     final prices = room['prices'] ?? [];
 
@@ -206,9 +200,7 @@ class _OfficeRoomListState extends State<OfficeRoomList> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 6),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(10),
@@ -233,7 +225,7 @@ class _OfficeRoomListState extends State<OfficeRoomList> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  room['Name'] ?? 'Office Room',
+                  room['Name'] ?? 'Meeting Room',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -268,36 +260,36 @@ class _OfficeRoomListState extends State<OfficeRoomList> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      prices.isNotEmpty
-                          ? '${prices[0]["price"]}DT / ${prices[0]["duration"]}'
-                          : '5 DT/1h',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                        // prices.isNotEmpty
+                        '5 DT / 1h'
+                        // : 'N/A',
+                        // style: const TextStyle(
+                        //   fontSize: 16,
+                        //   fontWeight: FontWeight.bold,
+                        // ),
+                        ),
                     ElevatedButton(
                       onPressed: () {
                         Navigator.pushNamed(
                           context,
                           '/course-detail1',
-                          arguments: room,
+                          arguments: {
+                            'room': room,
+                            'reservations': reservations[index],
+                            // ✅ Pass correct reservations[index] as you wanted!
+                          },
                         );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
+                            horizontal: 20, vertical: 10),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Reserve',
-                        style: TextStyle(fontSize: 13),
-                      ),
+                      child:
+                          const Text('Reserve', style: TextStyle(fontSize: 13)),
                     ),
                   ],
                 ),

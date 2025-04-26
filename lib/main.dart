@@ -505,6 +505,7 @@ import 'package:flutter_application_1/listoftables.dart';
 import 'package:flutter_application_1/login_screen.dart';
 import 'package:flutter_application_1/main_layout.dart';
 import 'package:flutter_application_1/officeRoomList.dart';
+// import 'package:flutter_application_1/officeRoomList.dart';
 import 'package:flutter_application_1/signup_screen.dart';
 import 'package:flutter_application_1/welcome_screen.dart';
 // import 'package:flutter_application_1/schedule_screen.dart';  // You create this
@@ -549,6 +550,20 @@ class MyApp extends StatelessWidget {
               args['reservations'],
             );
             return ReservationScreen(room: room, reservations: reservations);
+          }
+          return const Scaffold(
+            body: Center(child: Text('Error: no meeting-room data provided')),
+          );
+        },
+
+        '/course-detail1': (ctx) {
+          final args = ModalRoute.of(ctx)!.settings.arguments;
+          if (args is Map<String, dynamic>) {
+            final room = args['room'] as Map<String, dynamic>;
+            final reservations = List<Map<String, dynamic>>.from(
+              args['reservations'],
+            );
+            return OfficeRoomReservationScreen(room: room, reservations: reservations);
           }
           return const Scaffold(
             body: Center(child: Text('Error: no meeting-room data provided')),
