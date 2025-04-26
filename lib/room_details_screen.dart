@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -17,6 +18,11 @@ class _ReservationScreenState extends State<ReservationScreen> {
   DateTime get nowInTunisia =>
       DateTime.now().toUtc().add(const Duration(hours: 1));
 
+  // final prefs = await SharedPreferences.getInstance();
+  // String userId = prefs.getString(id);
+
+  late SharedPreferences prefs;
+  String? userId;
   DateTime? selectedDate;
   String? checkInTime;
   String? checkOutTime;
@@ -30,11 +36,39 @@ class _ReservationScreenState extends State<ReservationScreen> {
   int totalPrice = 0;
   final List<String> _allTimeSlots = [];
 
+//   @override
+//   void initState() {
+
+//     super.initState();
+//     _generateTimeSlots();
+//     _fetchUserPoints();
+//     _initializePreferences();
+
+//   }
+
+// Future<void> _initializePreferences() async {
+//   prefs = await SharedPreferences.getInstance();
+//   setState(() {
+//     userId = prefs.getString('id'); // Use correct key name
+//   });
+// }
+
   @override
   void initState() {
     super.initState();
     _generateTimeSlots();
-    _fetchUserPoints();
+    _initializePreferences(); // only initialize preferences first
+  }
+
+  Future<void> _initializePreferences() async {
+    prefs = await SharedPreferences.getInstance();
+    setState(() {
+      userId = prefs.getString('id');
+    });
+
+    if (userId != null) {
+      await _fetchUserPoints(); // fetch points only after userId is loaded
+    }
   }
 
   void _generateTimeSlots() {
@@ -251,9 +285,13 @@ class _ReservationScreenState extends State<ReservationScreen> {
   }
 
   Future<void> _fetchUserPoints() async {
+    if (userId == null) return; // 🚨 Important safety check
+
     setState(() => isLoading = true);
     try {
-      const userId = 'someUserId';
+      print("The userId is: ");
+      print(userId);
+
       final resp = await http.get(
         Uri.parse('http://localhost:8000/ELACO/Points/$userId'),
         headers: {'Content-Type': 'application/json'},
@@ -273,6 +311,30 @@ class _ReservationScreenState extends State<ReservationScreen> {
       setState(() => isLoading = false);
     }
   }
+
+  // Future<void> _fetchUserPoints() async {
+  //   setState(() => isLoading = true);
+  //   try {
+  //     // const userId = '67ff369b2f63df73b4ce3f1d';
+  //     final resp = await http.get(
+  //       Uri.parse('http://localhost:8000/ELACO/Points/$userId'),
+  //       headers: {'Content-Type': 'application/json'},
+  //     );
+
+  //     if (resp.statusCode == 200) {
+  //       final data = json.decode(resp.body);
+  //       if (data is Map && data.containsKey('points')) {
+  //         setState(() => userPoints = (data['points'] as num).toInt());
+  //       }
+  //     }
+  //   } catch (e) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Failed to load points: ${e.toString()}')),
+  //     );
+  //   } finally {
+  //     setState(() => isLoading = false);
+  //   }
+  // }
 
   Future<void> _onReserve() async {
     if (selectedDate == null || checkInTime == null || checkOutTime == null) {
@@ -392,6 +454,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
                               setState(() {
                                 checkInTime = value;
                                 checkOutTime = null;
+                                print("The userId is: ");
+                                print(userId);
                                 _calculatePrice();
                               });
                             },

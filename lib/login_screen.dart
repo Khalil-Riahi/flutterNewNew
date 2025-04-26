@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,9 +45,17 @@ class _LoginScreenState extends State<LoginScreen> {
         final result = jsonDecode(response.body);
         final userId = result['data']?['user']?['_id'];
 
+        // if (userId != null) {
+        //   Navigator.pushReplacementNamed(context, '/home');
+        // }
         if (userId != null) {
-          Navigator.pushReplacementNamed(context, '/home');
-        } else {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('id', userId); // ✅ Save userId
+
+  Navigator.pushReplacementNamed(context, '/home');
+}
+
+         else {
           setState(() {
             generalError = 'Unexpected server response.';
           });
