@@ -9,15 +9,21 @@ import 'package:flutter/services.dart';
 
 class ReservationScreen extends StatefulWidget {
   final Map<String, dynamic> room;
+  final List<Map<String, dynamic>> reservations;
 
-  const ReservationScreen({Key? key, required this.room}) : super(key: key);
+  const ReservationScreen({
+    Key? key,
+    required this.room,
+    required this.reservations,
+  }) : super(key: key);
 
   @override
   _ReservationScreenState createState() => _ReservationScreenState();
 }
 
 class _ReservationScreenState extends State<ReservationScreen> {
-  DateTime get nowInTunisia => DateTime.now().toUtc().add(const Duration(hours: 1));
+  DateTime get nowInTunisia =>
+      DateTime.now().toUtc().add(const Duration(hours: 1));
 
   late SharedPreferences prefs;
   String? userId;
@@ -43,12 +49,11 @@ class _ReservationScreenState extends State<ReservationScreen> {
   // ];
 
   final List<Color> _colorScheme = [
-  const Color(0xFF1ED8C6), // Primary (from logo)
-  const Color(0xFFFFFFFF), // Background (white)
-  const Color(0xFF000000), // Text (black)
-  const Color(0xFF718096), // Light Text (unchanged, you can adjust this)
-];
-
+    const Color(0xFF1ED8C6), // Primary (from logo)
+    const Color(0xFFFFFFFF), // Background (white)
+    const Color(0xFF000000), // Text (black)
+    const Color(0xFF718096), // Light Text (unchanged, you can adjust this)
+  ];
 
   @override
   void initState() {
@@ -59,6 +64,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
     ));
+    print(widget.reservations);
   }
 
   @override
@@ -119,7 +125,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
 
         if (decoded['data'] is List && decoded['data'].isNotEmpty) {
           if (decoded['data'][0] is List) {
-            allReservations = List<Map<String, dynamic>>.from(decoded['data'][0]);
+            allReservations =
+                List<Map<String, dynamic>>.from(decoded['data'][0]);
           } else {
             allReservations = List<Map<String, dynamic>>.from(decoded['data']);
           }
@@ -148,37 +155,150 @@ class _ReservationScreenState extends State<ReservationScreen> {
     return true;
   }
 
-  List<String> get availableTimeSlots {
-    final now = nowInTunisia;
-    int currentMinutes = 8 * 60;
+  // List<String> get availableTimeSlots {
+  //   final now = nowInTunisia;
+  //   int currentMinutes = 8 * 60;
 
-    if (selectedDate != null &&
-        selectedDate!.year == now.year &&
-        selectedDate!.month == now.month &&
-        selectedDate!.day == now.day) {
-      currentMinutes = now.minute > 30 ? (now.hour + 1) * 60 : now.hour * 60 + 30;
+  //   if (selectedDate != null &&
+  //       selectedDate!.year == now.year &&
+  //       selectedDate!.month == now.month &&
+  //       selectedDate!.day == now.day) {
+  //     currentMinutes =
+  //         now.minute > 30 ? (now.hour + 1) * 60 : now.hour * 60 + 30;
+  //   }
+
+  //   return _allTimeSlots.where((slot) {
+  //     final slotMinutes = _timeToMinutes(slot);
+  //     final end = slotMinutes + 60;
+  //     return slotMinutes >= currentMinutes &&
+  //         _isRangeAvailable(slotMinutes, end);
+  //   }).toList();
+  // }
+
+//   List<String> get availableTimeSlots {
+//   if (selectedDate == null) return [];
+
+//   return _allTimeSlots.where((slot) {
+//     final slotMinutes = _timeToMinutes(slot);
+
+//     for (final reservation in widget.reservations) {
+//       // ✅ Adjust reservation date to Tunisia timezone
+//       final resDateUtc = DateTime.parse(reservation['date']);
+//       final resDateTunisia = resDateUtc.toUtc().add(const Duration(hours: 1)); // Add +1 hour Tunisia
+
+//       if (resDateTunisia.year == selectedDate!.year &&
+//           resDateTunisia.month == selectedDate!.month &&
+//           resDateTunisia.day == selectedDate!.day) {
+//         final resStart = _timeToMinutes(reservation['check_in']);
+//         final resEnd = _timeToMinutes(reservation['check_out']);
+//         if (slotMinutes >= resStart && slotMinutes < resEnd) {
+//           return false; // Slot is reserved
+//         }
+//       }
+//     }
+//     return true; // Slot is available
+//   }).toList();
+// }
+
+  List<String> get availableTimeSlots {
+    if (selectedDate == null) return [];
+
+    // Tunisia timezone
+    final nowInTunisia = DateTime.now().toUtc().add(const Duration(hours: 1));
+    final tunisiaSelectedDate =
+        selectedDate!.toUtc().add(const Duration(hours: 1));
+
+    // Calculate starting minute
+    int startingMinutes;
+    if (nowInTunisia.year == tunisiaSelectedDate.year &&
+        nowInTunisia.month == tunisiaSelectedDate.month &&
+        nowInTunisia.day == tunisiaSelectedDate.day) {
+      // Today -> Start from next 30 min
+      startingMinutes =
+          ((nowInTunisia.hour * 60 + nowInTunisia.minute) ~/ 30 + 1) * 30;
+    } else {
+      // Future date -> Start from 8:00 (8 * 60 = 480)
+      startingMinutes = 8 * 60;
     }
 
     return _allTimeSlots.where((slot) {
       final slotMinutes = _timeToMinutes(slot);
-      final end = slotMinutes + 60;
-      return slotMinutes >= currentMinutes && _isRangeAvailable(slotMinutes, end);
+
+      if (slotMinutes < startingMinutes)
+        return false; // ✅ Skip before startingMinutes
+
+      for (final reservation in widget.reservations) {
+        final resDateUtc = DateTime.parse(reservation['date']);
+        final resDateTunisia = resDateUtc.toUtc().add(const Duration(hours: 1));
+
+        if (resDateTunisia.year == tunisiaSelectedDate.year &&
+            resDateTunisia.month == tunisiaSelectedDate.month &&
+            resDateTunisia.day == tunisiaSelectedDate.day) {
+          final resStart = _timeToMinutes(reservation['check_in']);
+          final resEnd = _timeToMinutes(reservation['check_out']);
+          if (slotMinutes >= resStart && slotMinutes < resEnd) {
+            return false; // Slot is reserved
+          }
+        }
+      }
+      return true; // Slot is available
     }).toList();
   }
 
+  // List<String> get availableCheckOutSlots {
+  //   if (checkInTime == null) return [];
+  //   final checkInMinutes = _timeToMinutes(checkInTime!);
+  //   List<String> valid = [];
+
+  //   for (int i = checkInMinutes + 30; i <= 1440; i += 30) {
+  //     if (i - checkInMinutes < 60) continue;
+  //     if (_isRangeAvailable(checkInMinutes, i)) {
+  //       valid.add(_minutesToTime(i));
+  //     } else {
+  //       break;
+  //     }
+  //   }
+  //   return valid;
+  // }
+
   List<String> get availableCheckOutSlots {
     if (checkInTime == null) return [];
+
     final checkInMinutes = _timeToMinutes(checkInTime!);
     List<String> valid = [];
 
     for (int i = checkInMinutes + 30; i <= 1440; i += 30) {
       if (i - checkInMinutes < 60) continue;
-      if (_isRangeAvailable(checkInMinutes, i)) {
+
+      bool isAvailable = true;
+
+      for (final reservation in widget.reservations) {
+        // ✅ Adjust reservation date to Tunisia timezone
+        final resDateUtc = DateTime.parse(reservation['date']);
+        final resDateTunisia = resDateUtc
+            .toUtc()
+            .add(const Duration(hours: 1)); // Correct to Tunisia
+
+        if (resDateTunisia.year == selectedDate!.year &&
+            resDateTunisia.month == selectedDate!.month &&
+            resDateTunisia.day == selectedDate!.day) {
+          final resStart = _timeToMinutes(reservation['check_in']);
+          final resEnd = _timeToMinutes(reservation['check_out']);
+
+          if (i > resStart && checkInMinutes < resEnd) {
+            isAvailable = false;
+            break;
+          }
+        }
+      }
+
+      if (isAvailable) {
         valid.add(_minutesToTime(i));
       } else {
         break;
       }
     }
+
     return valid;
   }
 
@@ -194,13 +314,20 @@ class _ReservationScreenState extends State<ReservationScreen> {
 
     try {
       final prices = widget.room['prices'] as List;
-      final hourly = (prices.firstWhere((p) => p['duration'] == '1h')['price'] as num).toInt();
+      final hourly =
+          (prices.firstWhere((p) => p['duration'] == '1h')['price'] as num)
+              .toInt();
 
       int price;
       if (durationHours == 2) {
-        price = (prices.firstWhere((p) => p['duration'] == '2h')['price'] as num).toInt();
+        price =
+            (prices.firstWhere((p) => p['duration'] == '2h')['price'] as num)
+                .toInt();
       } else if (durationHours == 5) {
-        price = (prices.firstWhere((p) => p['duration'] == '1/2 Day (5h)')['price'] as num).toInt();
+        price =
+            (prices.firstWhere((p) => p['duration'] == '1/2 Day (5h)')['price']
+                    as num)
+                .toInt();
       } else {
         price = (durationHours * hourly).round();
       }
@@ -282,7 +409,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: _colorScheme[2], size: 20),
+          icon:
+              Icon(Icons.arrow_back_ios_new, color: _colorScheme[2], size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -346,7 +474,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: isCompleted || isCurrent ? _colorScheme[0] : Colors.grey[300],
+            color:
+                isCompleted || isCurrent ? _colorScheme[0] : Colors.grey[300],
             borderRadius: BorderRadius.circular(16),
           ),
           child: Center(
@@ -383,8 +512,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Room info card
-              _buildRoomInfoCard(),
-              const SizedBox(height: 24),
+              // _buildRoomInfoCard(),
+              // const SizedBox(height: 24),
 
               // Calendar section
               _buildSectionHeader('Select Date'),
@@ -398,9 +527,10 @@ class _ReservationScreenState extends State<ReservationScreen> {
 
               // Next button
               _buildNextButton(
-                isEnabled: selectedDate != null && checkInTime != null && checkOutTime != null, 
-                onPressed: _nextStep
-              ),
+                  isEnabled: selectedDate != null &&
+                      checkInTime != null &&
+                      checkOutTime != null,
+                  onPressed: _nextStep),
             ],
           ),
         ),
@@ -408,66 +538,66 @@ class _ReservationScreenState extends State<ReservationScreen> {
     );
   }
 
-  Widget _buildRoomInfoCard() {
-    final roomName = widget.room['name'] ?? 'Room';
-    final roomNumber = widget.room['numTable'] ?? '';
-    
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: _colorScheme[3].withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.meeting_room,
-              color: _colorScheme[3],
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  roomName,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: _colorScheme[2],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Room #$roomNumber',
-                  style: TextStyle(
-                    color: _colorScheme[3],
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildRoomInfoCard() {
+  //   final roomName = widget.room['name'] ?? 'Room';
+  //   final roomNumber = widget.room['numTable'] ?? '';
+
+  //   return Container(
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(12),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withOpacity(0.05),
+  //           blurRadius: 10,
+  //           offset: const Offset(0, 5),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         Container(
+  //           width: 64,
+  //           height: 64,
+  //           decoration: BoxDecoration(
+  //             color: _colorScheme[3].withOpacity(0.1),
+  //             borderRadius: BorderRadius.circular(12),
+  //           ),
+  //           child: Icon(
+  //             Icons.meeting_room,
+  //             color: _colorScheme[3],
+  //             size: 32,
+  //           ),
+  //         ),
+  //         const SizedBox(width: 16),
+  //         Expanded(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text(
+  //                 roomName,
+  //                 style: TextStyle(
+  //                   fontSize: 18,
+  //                   fontWeight: FontWeight.bold,
+  //                   color: _colorScheme[2],
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 4),
+  //               Text(
+  //                 'Room #$roomNumber',
+  //                 style: TextStyle(
+  //                   color: _colorScheme[3],
+  //                   fontSize: 14,
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildSectionHeader(String title) {
     return Padding(
@@ -531,10 +661,10 @@ class _ReservationScreenState extends State<ReservationScreen> {
                 color: _colorScheme[2],
               ),
               leftChevronIcon: Icon(Icons.chevron_left, color: _colorScheme[2]),
-              rightChevronIcon: Icon(Icons.chevron_right, color: _colorScheme[2]),
+              rightChevronIcon:
+                  Icon(Icons.chevron_right, color: _colorScheme[2]),
             ),
           ),
-          
           if (selectedDate != null)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -552,102 +682,205 @@ class _ReservationScreenState extends State<ReservationScreen> {
     );
   }
 
+  // Widget _buildTimeSelectionCard() {
+  //   return Container(
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(12),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withOpacity(0.05),
+  //           blurRadius: 10,
+  //           offset: const Offset(0, 5),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         // Check-in time
+  //         Text(
+  //           'Check-in time',
+  //           style: TextStyle(
+  //             fontSize: 14,
+  //             fontWeight: FontWeight.w500,
+  //             color: _colorScheme[2],
+  //           ),
+  //         ),
+  //         const SizedBox(height: 8),
+  //         _buildDropdown(
+  //           value: checkInTime,
+  //           hint: 'Select start time',
+  //           items: availableTimeSlots,
+  //           onChanged: (v) {
+  //             setState(() {
+  //               checkInTime = v;
+  //               checkOutTime = null;
+  //               _calculatePrice();
+  //             });
+  //           },
+  //         ),
+  //         const SizedBox(height: 16),
+
+  //         // Check-out time
+  //         Text(
+  //           'Check-out time',
+  //           style: TextStyle(
+  //             fontSize: 14,
+  //             fontWeight: FontWeight.w500,
+  //             color: _colorScheme[2],
+  //           ),
+  //         ),
+  //         const SizedBox(height: 8),
+  //         _buildDropdown(
+  //           value: checkOutTime,
+  //           hint: 'Select end time',
+  //           items: availableCheckOutSlots,
+  //           onChanged: (v) {
+  //             setState(() {
+  //               checkOutTime = v;
+  //               _calculatePrice();
+  //             });
+  //           },
+  //         ),
+
+  //         // Duration info
+  //         if (checkInTime != null && checkOutTime != null)
+  //           Padding(
+  //             padding: const EdgeInsets.only(top: 16),
+  //             child: Row(
+  //               children: [
+  //                 Icon(Icons.access_time, size: 18, color: _colorScheme[3]),
+  //                 const SizedBox(width: 8),
+  //                 Text(
+  //                   'Duration: ${_calculateDuration()}',
+  //                   style: TextStyle(
+  //                     fontSize: 14,
+  //                     color: _colorScheme[3],
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
   Widget _buildTimeSelectionCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Check-in time
-          Text(
-            'Check-in time',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: _colorScheme[2],
-            ),
-          ),
-          const SizedBox(height: 8),
-          _buildDropdown(
-            value: checkInTime,
-            hint: 'Select start time',
-            items: availableTimeSlots,
-            onChanged: (v) {
-              setState(() {
-                checkInTime = v;
-                checkOutTime = null;
-                _calculatePrice();
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          
-          // Check-out time
-          Text(
-            'Check-out time',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: _colorScheme[2],
-            ),
-          ),
-          const SizedBox(height: 8),
-          _buildDropdown(
-            value: checkOutTime,
-            hint: 'Select end time',
-            items: availableCheckOutSlots,
-            onChanged: (v) {
-              setState(() {
-                checkOutTime = v;
-                _calculatePrice();
-              });
-            },
-          ),
-          
-          // Duration info
-          if (checkInTime != null && checkOutTime != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Row(
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 5),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // The two dropdowns side by side
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.access_time, size: 18, color: _colorScheme[3]),
-                  const SizedBox(width: 8),
                   Text(
-                    'Duration: ${_calculateDuration()}',
+                    'Check-in time',
                     style: TextStyle(
                       fontSize: 14,
-                      color: _colorScheme[3],
+                      fontWeight: FontWeight.w500,
+                      color: _colorScheme[2],
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildDropdown(
+                    value: checkInTime,
+                    hint: 'Start time',
+                    items: availableTimeSlots,
+                    onChanged: (v) {
+                      setState(() {
+                        checkInTime = v;
+                        checkOutTime = null;
+                        _calculatePrice();
+                      });
+                    },
                   ),
                 ],
               ),
             ),
-        ],
-      ),
-    );
-  }
+            const SizedBox(width: 16), // space between them
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Check-out time',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: _colorScheme[2],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildDropdown(
+                    value: checkOutTime,
+                    hint: 'End time',
+                    items: availableCheckOutSlots,
+                    onChanged: (v) {
+                      setState(() {
+                        checkOutTime = v;
+                        _calculatePrice();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        // Duration info under them
+        if (checkInTime != null && checkOutTime != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Row(
+              children: [
+                Icon(Icons.access_time, size: 18, color: _colorScheme[3]),
+                const SizedBox(width: 8),
+                Text(
+                  'Duration: ${_calculateDuration()}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: _colorScheme[3],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
 
   String _calculateDuration() {
     if (checkInTime == null || checkOutTime == null) return '';
-    
+
     final start = _timeToMinutes(checkInTime!);
     final end = _timeToMinutes(checkOutTime!);
     final durationMinutes = end - start;
-    
+
     final hours = durationMinutes ~/ 60;
     final minutes = durationMinutes % 60;
-    
+
     if (minutes == 0) {
       return hours == 1 ? '1 hour' : '$hours hours';
     } else {
@@ -699,12 +932,12 @@ class _ReservationScreenState extends State<ReservationScreen> {
               // Price summary card
               _buildPriceSummaryCard(),
               const SizedBox(height: 24),
-              
+
               // Payment methods
               _buildSectionHeader('Payment Method'),
               _buildPaymentMethodsCard(),
               const SizedBox(height: 40),
-              
+
               // Navigation buttons
               Row(
                 children: [
@@ -855,9 +1088,10 @@ class _ReservationScreenState extends State<ReservationScreen> {
     );
   }
 
-  Widget _buildPaymentOption(String value, String title, String subtitle, IconData icon) {
+  Widget _buildPaymentOption(
+      String value, String title, String subtitle, IconData icon) {
     final isSelected = paymentMethod == value;
-    
+
     return InkWell(
       onTap: () => setState(() => paymentMethod = value),
       child: Padding(
@@ -927,7 +1161,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            
+
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -935,14 +1169,14 @@ class _ReservationScreenState extends State<ReservationScreen> {
                     // Reservation details card
                     _buildDetailsCard(),
                     const SizedBox(height: 24),
-                    
+
                     // Payment details card
                     _buildPaymentDetailsCard(),
                   ],
                 ),
               ),
             ),
-            
+
             // Buttons
             const SizedBox(height: 24),
             Row(
@@ -1001,7 +1235,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
   // Widget _buildDetailsCard() {
   //   final dateStr = selectedDate != null
   //       ? DateFormat('EEEE, MMMM d, yyyy').format(selecte
-  
+
   Widget _buildDetailsCard() {
     final dateStr = selectedDate != null
         ? DateFormat('EEEE, MMMM d, yyyy').format(selectedDate!)
@@ -1038,7 +1272,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildDetailRow('Room', '${widget.room['name']} (Table #${widget.room['numTable']})'),
+          _buildDetailRow('Room',
+              '${widget.room['name']} (Table #${widget.room['numTable']})'),
           const Divider(height: 24),
           _buildDetailRow('Date', dateStr),
           const SizedBox(height: 12),
@@ -1177,7 +1412,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
     );
   }
 
-  Widget _buildNextButton({required bool isEnabled, required VoidCallback onPressed}) {
+  Widget _buildNextButton(
+      {required bool isEnabled, required VoidCallback onPressed}) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -1242,7 +1478,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
         final bookingData1 = {'amount': totalPrice * 1000};
         final formattedDate = selectedDate!.toIso8601String().split('T')[0];
         final resp = await http.post(
-          Uri.parse('http://localhost:8000/ELACO/booking/payment?start_time=$checkInTime&end_time=$checkOutTime&numTable=${widget.room['numTable']}&date=$formattedDate'),
+          Uri.parse(
+              'http://localhost:8000/ELACO/booking/payment?start_time=$checkInTime&end_time=$checkOutTime&numTable=${widget.room['numTable']}&date=$formattedDate'),
           headers: {'Content-Type': 'application/json'},
           body: json.encode(bookingData1),
         );
@@ -1252,7 +1489,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
           final redirectUrl = result['result']['payUrl'];
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => WebViewScreen(payUrl: redirectUrl)),
+            MaterialPageRoute(
+                builder: (context) => WebViewScreen(payUrl: redirectUrl)),
           );
         } else {
           _showErrorSnackBar(result['message'] ?? 'Payment failed');
@@ -1271,7 +1509,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
               backgroundColor: Colors.green[700],
               behavior: SnackBarBehavior.floating,
               margin: const EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           );
           Navigator.pop(context, true);

@@ -541,26 +541,41 @@ class MyApp extends StatelessWidget {
         '/reserveMeetingRoom': (context) => MyCoursesScreen(),
         '/reserveOfficeRoom': (context) => OfficeRoomList(),
 
-        '/course-detail1': (ctx) {
-          final args = ModalRoute.of(ctx)!.settings.arguments;
-          if (args is Map<String, dynamic>) {
-            return OfficeRoomReservationScreen(room: args);
-          }
-          return const Scaffold(
-            body: Center(child: Text('Error: no office-room data provided')),
-          );
-        },
-        // ''
-
         '/course-detail': (ctx) {
           final args = ModalRoute.of(ctx)!.settings.arguments;
           if (args is Map<String, dynamic>) {
-            return ReservationScreen(room: args);
+            final room = args['room'] as Map<String, dynamic>;
+            final reservations = List<Map<String, dynamic>>.from(
+              args['reservations'],
+            );
+            return ReservationScreen(room: room, reservations: reservations);
           }
           return const Scaffold(
-            body: Center(child: Text('Error: no meeting‐room data provided')),
+            body: Center(child: Text('Error: no meeting-room data provided')),
           );
         },
+
+        // '/course-detail1': (ctx) {
+        //   final args = ModalRoute.of(ctx)!.settings.arguments;
+        //   if (args is Map<String, dynamic>) {
+        //     return OfficeRoomReservationScreen(room: args);
+        //   }
+        //   return const Scaffold(
+        //     body: Center(child: Text('Error: no office-room data provided')),
+        //   );
+        // },
+        // ''
+
+        // '/course-detail': (ctx) {
+        //   final args = ModalRoute.of(ctx)!.settings.arguments;
+        //   if (args is Map<String, dynamic>) {
+        //     return ReservationScreen(room: args);
+        //   }
+        //   return const Scaffold(
+        //     body: Center(child: Text('Error: no meeting‐room data provided')),
+        //   );
+        // },
+        
 
         // '/home': (_) =>
         //     MainLayout(child: const MyCoursesScreen(), currentIndex: 0),
